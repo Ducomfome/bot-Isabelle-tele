@@ -2,9 +2,11 @@ import telebot
 import os
 from flask import Flask, request
 import logging
+import json
 
 # =========== CONFIGURAÇÃO ===========
 TOKEN = os.getenv("BOT_TOKEN", "8272120672:AAFPTNTVl7JveC-C-52BCbLK_-wF0iIdKKI")
+CHAT_ID = "-1002765666559"
 
 # =========== INICIALIZAÇÃO ===========
 bot = telebot.TeleBot(TOKEN)
@@ -12,35 +14,36 @@ app = Flask(__name__)
 
 # =========== DEBUG ===========
 logging.basicConfig(level=logging.DEBUG)
-print(">>> BOT INICIANDO - VERSÃO SIMPLES <<<")
+print(">>> BOT INICIANDO - PROCESSAMENTO MANUAL <<<")
 
-# =========== HANDLER ÚNICO E SIMPLES ===========
-@bot.message_handler(func=lambda message: True)
-def handle_all_messages(message):
-    print(f"🔍 MENSAGEM RECEBIDA: {message.text}")
+# =========== FUNÇÃO PARA PROCESSAR MENSAGENS MANUALMENTE ===========
+def process_message(message):
+    print(f"🔍 PROCESSANDO MENSAGEM: {message.text}")
     print(f"🔍 CHAT ID: {message.chat.id}")
     print(f"🔍 FROM: {message.from_user.first_name}")
     
     try:
         if message.text == '/start':
-            bot.reply_to(message, "🎉 FUNCIONANDO! Bot simples está respondendo!")
+            bot.send_message(message.chat.id, "🎉 FUNCIONOU! Processamento MANUAL!")
             print("✅ /start respondido!")
             
         elif message.text == '/post':
-            bot.reply_to(message, "📸 Post seria enviado aqui!")
-            print("✅ /post respondido!")
+            # Post simples para teste
+            bot.send_message(CHAT_ID, "📸 POST DE TESTE - Funcionando!")
+            bot.send_message(message.chat.id, "✅ Post enviado no grupo!")
+            print("✅ /post processado!")
             
         else:
-            bot.reply_to(message, f"🤖 Recebido: {message.text}")
+            bot.send_message(message.chat.id, f"🤖 Recebido: {message.text}")
             print("✅ Mensagem genérica respondida!")
             
     except Exception as e:
-        print(f"❌ ERRO: {e}")
+        print(f"❌ ERRO ao processar: {e}")
 
 # =========== WEBHOOK ===========
 @app.route('/')
 def index():
-    return "🤖 Bot SIMPLES funcionando!"
+    return "🤖 Bot com processamento MANUAL!"
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -48,10 +51,18 @@ def webhook():
     try:
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
-            update = telebot.types.Update.de_json(json_string)
-            bot.process_new_updates([update])
-            print("✅ Update processado!")
+            data = json.loads(json_string)
+            
+            print(f"📨 Dados recebidos: {json.dumps(data, indent=2)}")
+            
+            # Processa manualmente a mensagem
+            if 'message' in data:
+                message = telebot.types.Message.de_json(data['message'])
+                process_message(message)
+            
+            print("✅ Update processado MANUALMENTE!")
             return 'OK', 200
+            
         return 'Bad Request', 400
     except Exception as e:
         print(f"❌ Erro webhook: {e}")
