@@ -43,10 +43,30 @@ def enviar_post():
         print(f"❌ ERRO AO ENVIAR POST: {e}")
         return False
 
+# =========== DEBUG - CAPTURA TODAS AS MENSAGENS ===========
+@bot.message_handler(func=lambda message: True)
+def debug_all_messages(message):
+    print(f"🔍 DEBUG - MENSAGEM RECEBIDA:")
+    print(f"   Chat ID: {message.chat.id}")
+    print(f"   Texto: {message.text}")
+    print(f"   From: {message.from_user.first_name}")
+    print(f"   Chat type: {message.chat.type}")
+    print(f"   Comando: {message.text if message.text else 'None'}")
+    
+    # Responde a TODAS as mensagens para debug
+    try:
+        if message.text and message.text.startswith('/'):
+            bot.reply_to(message, f"🔍 DEBUG: Comando recebido - {message.text}")
+        else:
+            bot.reply_to(message, f"🔍 DEBUG: Mensagem recebida - {message.text}")
+        print("✅ Resposta de debug enviada!")
+    except Exception as e:
+        print(f"❌ Erro ao enviar resposta debug: {e}")
+
 # =========== COMANDOS DO BOT ===========
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    print(f"📨 Comando /start recebido de: {message.from_user.first_name}")
+    print(f"🎯 Comando /start detectado!")
     try:
         bot.reply_to(message, "Olá! Eu sou a Isabelle Bot 🤖\n\nEstou funcionando perfeitamente! 💫\n\nUse /post para enviar um conteúdo.")
         print("✅ Resposta /start enviada!")
@@ -55,24 +75,16 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['post'])
 def send_post(message):
-    print(f"📨 Comando /post recebido de: {message.from_user.first_name}")
+    print(f"🎯 Comando /post detectado!")
     try:
-        if str(message.chat.id) == CHAT_ID:
-            bot.reply_to(message, "🔄 Enviando post...")
-            if enviar_post():
-                bot.reply_to(message, "✅ Post enviado com sucesso!")
-            else:
-                bot.reply_to(message, "❌ Erro ao enviar post.")
+        bot.reply_to(message, "🔄 Enviando post...")
+        if enviar_post():
+            bot.reply_to(message, "✅ Post enviado com sucesso!")
         else:
-            bot.reply_to(message, "❌ Este comando só funciona no grupo VIP.")
+            bot.reply_to(message, "❌ Erro ao enviar post.")
         print("✅ Comando /post processado!")
     except Exception as e:
         print(f"❌ Erro ao processar /post: {e}")
-
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    print(f"📨 Mensagem recebida: {message.text}")
-    bot.reply_to(message, "🤖 Eu sou um bot! Use /start ou /post")
 
 # =========== WEBHOOK CONFIGURATION ===========
 @app.route('/')
@@ -86,6 +98,13 @@ def webhook():
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
             update = telebot.types.Update.de_json(json_string)
+            
+            # Debug do update
+            if update.message:
+                print(f"📨 Update contém mensagem: {update.message.text}")
+            else:
+                print("📨 Update sem mensagem")
+                
             bot.process_new_updates([update])
             print("✅ Update processado com sucesso!")
             return 'OK', 200
