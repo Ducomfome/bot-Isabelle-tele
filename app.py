@@ -6,6 +6,7 @@ import json
 import time
 import random
 import threading
+import requests
 
 # =========== CONFIGURAÇÃO ===========
 TOKEN = os.getenv("BOT_TOKEN", "8272120672:AAFPTNTVl7JveC-C-52BCbLK_-wF0iIdKKI")
@@ -18,7 +19,20 @@ app = Flask(__name__)
 
 # =========== DEBUG ===========
 logging.basicConfig(level=logging.DEBUG)
-print(">>> BOT ISABELLE - ARSENAL COMPLETO <<<")
+print(">>> BOT ISABELLE - ANTI-SONO ATIVADO <<<")
+
+# =========== SISTEMA ANTI-SONO ===========
+def keep_alive():
+    """Faz requisições periódicas para manter o serviço acordado"""
+    print("🔔 SISTEMA ANTI-SONO INICIADO")
+    while True:
+        try:
+            response = requests.get("https://bot-isabelle-tele.onrender.com", timeout=10)
+            print(f"🔔 Keep-alive: Serviço acordado (Status: {response.status_code})")
+            time.sleep(300)  # 5 minutos entre chamadas
+        except Exception as e:
+            print(f"🔔 Keep-alive erro: {e}")
+            time.sleep(60)  # Espera 1 minuto se der erro
 
 # =========== ARSENAL COMPLETO - 24 POSTS ===========
 posts = [
@@ -49,7 +63,7 @@ posts = [
     # Post 13
     {"legenda": "Just a little taste...\nThe full meal is in my VIP 🍑\nClick below 👇", "midia": "AgACAgEAAxkBAAEf_ChpGQAB9JVCKAeOq5ROwsbBTOyh6ScAAg8Laxu1oMlEfJ0zstDPHOkBAAMCAAN4AAM2BA", "texto_botao_1": "🔥 VIP ACCESS 🔥", "link_botao_1": "https://t.me/ISABELLEVIPGRUPOBOT", "texto_botao_2": "📲 MY WHATSAPP 📲", "link_botao_2": "https://t.me/MeuWhastAppbot"},
     # Post 14
-    {"legenda": "This content is addictive...\nOnce you start, you can't stop 💫\nClick below 👇", "midia": "AgACAgEAAxkBAAEf_ClpGQAB9PaDpvvK9kbzzGm2127NtbAAAhALaxu1oMlE-IaeSE0qYRUBAAMCAAN4AAM2BA", "texto_botao_1": "🔥 VIP ACCESS 🔥", "link_botao_1": "https://t.me/ISABELLEVIPGRUPOBOT", "texto_botao_2": "📲 MY WHATSAPP 📲", "link_botao_2": "https://t.me/MeuWhastAppbot"},
+    {"legenda": "This content is addictive...\nOnce you start, you can't stop 💫\nClick below �👇", "midia": "AgACAgEAAxkBAAEf_ClpGQAB9PaDpvvK9kbzzGm2127NtbAAAhALaxu1oMlE-IaeSE0qYRUBAAMCAAN4AAM2BA", "texto_botao_1": "🔥 VIP ACCESS 🔥", "link_botao_1": "https://t.me/ISABELLEVIPGRUPOBOT", "texto_botao_2": "📲 MY WHATSAPP 📲", "link_botao_2": "https://t.me/MeuWhastAppbot"},
     # Post 15
     {"legenda": "The difference between preview and VIP...\nIs like night and day 🌙\nClick below 👇", "midia": "AgACAgEAAxkBAAEf_C1pGQAB9Kppt66CCk84MIKS2FlRo6EAAhMLaxu1oMlECUR5UmEja9UBAAMCAAN4AAM2BA", "texto_botao_1": "🔥 VIP ACCESS 🔥", "link_botao_1": "https://t.me/ISABELLEVIPGRUPOBOT", "texto_botao_2": "📲 MY WHATSAPP 📲", "link_botao_2": "https://t.me/MeuWhastAppbot"},
     # Post 16
@@ -134,11 +148,11 @@ Essas prévias são só um gostinho do que você encontra no meu VIP!
             
         elif message.text == '/post':
             if str(message.chat.id) == CHAT_ID:
-                bot.send_message(message.chat.id, "🔄 Enviando post...")
+                # ENVIA DIRETO SEM MENSAGENS EXTRAS
                 if enviar_post_automatico():
-                    bot.send_message(message.chat.id, "✅ Post enviado com sucesso!")
+                    print("✅ /post executado silenciosamente!")
                 else:
-                    bot.send_message(message.chat.id, "❌ Erro ao enviar post.")
+                    bot.send_message(message.chat.id, "❌ Erro ao enviar post.")  # Só erro aparece
             else:
                 bot.send_message(message.chat.id, "❌ Este comando só funciona no grupo VIP.")
             print("✅ /post processado!")
@@ -157,7 +171,7 @@ Essas prévias são só um gostinho do que você encontra no meu VIP!
 # =========== WEBHOOK ===========
 @app.route('/')
 def index():
-    return "🤖 Bot Isabelle - ARSENAL COMPLETO! 24 POSTS!"
+    return "🤖 Bot Isabelle - ANTI-SONO ATIVADO! 24/7!"
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -189,6 +203,11 @@ if __name__ == '__main__':
     thread_posts = threading.Thread(target=posts_automaticos, daemon=True)
     thread_posts.start()
     
+    # Inicia sistema anti-sono
+    keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
+    keep_alive_thread.start()
+    
     print(">>> BOT INICIADO COM SUCESSO! <<<")
+    print(">>> ANTI-SONO ATIVADO - SERVIRÁ 24/7! <<<")
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
