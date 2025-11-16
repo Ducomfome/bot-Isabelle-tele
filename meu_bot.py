@@ -2,13 +2,18 @@ import telebot
 import time
 import random
 import os
+from flask import Flask, request
 
-# =========== ÁREA DE CONFIGURAÇÃO (FINAL E CORRETA) ===========
-TOKEN = "8272120672:AAFPTNTVl7JveC-C-52BCbLK_-wF0iIdKKI" # Token do @Isabellegerentebot
-CHAT_ID = "-1002765666559" # ID do grupo "Isabelle - prévias🫦"
-INTERVALO_ENTRE_POSTS_EM_MINUTOS = 60 # RITMO NORMAL: 1 POST POR HORA
+# =========== CONFIGURAÇÃO ===========
+TOKEN = os.getenv("BOT_TOKEN", "8272120672:AAFPTNTVl7JveC-C-52BCbLK_-wF0iIdKKI")
+CHAT_ID = "-1002765666559"
+INTERVALO_ENTRE_POSTS_EM_MINUTOS = 60
 
-# =========== ARSENAL DE POSTS ATUALIZADO COM LEGENDAS EM INGLÊS ===========
+# =========== INICIALIZAÇÃO ===========
+bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
+
+# =========== ARSENAL DE POSTS ===========
 posts = [
     # Post 1
     {"legenda": "You can't see this on my Instagram...\nWant more? Click below 👇", "midia": "AgACAgEAAxkBAAEf_BFpGQABUd0NjEhExUTVX0uJVrQ4udYAAgMLaxu1oMlEHmX9-lkG9foBAAMCAAN4AAM2BA", "texto_botao_1": "🔥 VIP ACCESS 🔥", "link_botao_1": "https://t.me/ISABELLEVIPGRUPOBOT", "texto_botao_2": "📲 MY WHATSAPP 📲", "link_botao_2": "https://t.me/MeuWhastAppbot"},
@@ -83,37 +88,83 @@ posts = [
     {"legenda": "If you think you've seen it all...\nClick below and think again 🤯\nClick below 👇", "midia": "AgACAgEAAxkBAAEf_DtpGQFjQwsy7SrxG8rcSouGsHdpOAACGgtrG7WgyUTD-NSOQX5fqwEAAwIAA3gAAzYE", "texto_botao_1": "🔥 VIP ACCESS 🔥", "link_botao_1": "https://t.me/ISABELLEVIPGRUPOBOT", "texto_botao_2": "📲 MY WHATSAPP 📲", "link_botao_2": "https://t.me/MeuWhastAppbot"}
 ]
 
-# Daqui pra baixo, o motor da máquina.
-# ---------------------------------------------------------------------
-# Verifica se o token foi carregado do servidor (para deploy online)
-if "BOT_TOKEN" in os.environ:
-    TOKEN = os.environ["BOT_TOKEN"]
-
-if TOKEN is None:
-    print("ERRO CRÍTICO: Token não encontrado. Defina a variável TOKEN ou a variável de ambiente BOT_TOKEN.")
-    exit()
-
-bot = telebot.TeleBot(TOKEN)
-print(">>> BOT COM FUNIL DUPLO INICIADO. Operação em máxima potência. <<<")
-
-while True:
+# =========== FUNÇÃO PARA POST AUTOMÁTICO ===========
+def enviar_post_automatico():
     try:
         post_aleatorio = random.choice(posts)
         markup = telebot.types.InlineKeyboardMarkup()
 
-        # Criando os dois botões a partir das informações do post
         btn1 = telebot.types.InlineKeyboardButton(text=post_aleatorio["texto_botao_1"], url=post_aleatorio["link_botao_1"])
         btn2 = telebot.types.InlineKeyboardButton(text=post_aleatorio["texto_botao_2"], url=post_aleatorio["link_botao_2"])
-
-        # Adicionando os dois botões na mesma linha, lado a lado
         markup.add(btn1, btn2)
         
         bot.send_photo(CHAT_ID, photo=post_aleatorio['midia'], caption=post_aleatorio['legenda'], reply_markup=markup)
-        print(f"Post com botão duplo enviado: {post_aleatorio['legenda']}")
-        
-        print(f"Próximo post em {INTERVALO_ENTRE_POSTS_EM_MINUTOS} minutos...")
-        time.sleep(INTERVALO_ENTRE_POSTS_EM_MINUTOS * 60)
+        print(f"Post automático enviado: {post_aleatorio['legenda']}")
         
     except Exception as e:
-        print(f"Ocorreu um erro: {e}. Verificando o file_id: {post_aleatorio.get('midia', 'N/A')}")
-        time.sleep(30)
+        print(f"Erro no post automático: {e}")
+
+# =========== WEBHOOK CONFIGURATION ===========
+@app.route('/')
+def index():
+    return "🤖 Bot Isabelle está funcionando perfeitamente! 🚀"
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    else:
+        return 'Bad Request', 400
+
+# =========== COMANDOS DO BOT ===========
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "Olá! Eu sou a Isabelle Bot 🤖\n\nEstou funcionando perfeitamente e postando conteúdo automático no grupo! 💫")
+
+@bot.message_handler(commands=['post'])
+def send_post(message):
+    if str(message.chat.id) == CHAT_ID:
+        enviar_post_automatico()
+        bot.reply_to(message, "✅ Post enviado com sucesso!")
+    else:
+        bot.reply_to(message, "❌ Este comando só funciona no grupo VIP.")
+
+# =========== INICIALIZAÇÃO DO WEBHOOK ===========
+def set_webhook():
+    webhook_url = f"https://{os.getenv('RENDER_SERVICE_NAME')}.onrender.com/webhook"
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.set_webhook(url=webhook_url)
+    print(f"Webhook configurado: {webhook_url}")
+
+# =========== THREAD PARA POSTS AUTOMÁTICOS ===========
+import threading
+
+def posts_automaticos():
+    while True:
+        try:
+            enviar_post_automatico()
+            time.sleep(INTERVALO_ENTRE_POSTS_EM_MINUTOS * 60)
+        except Exception as e:
+            print(f"Erro na thread de posts automáticos: {e}")
+            time.sleep(60)
+
+# =========== INICIALIZAÇÃO ===========
+if __name__ == '__main__':
+    print(">>> BOT ISABELLE INICIANDO <<<")
+    
+    # Configura webhook
+    set_webhook()
+    
+    # Inicia thread de posts automáticos
+    thread_posts = threading.Thread(target=posts_automaticos, daemon=True)
+    thread_posts.start()
+    
+    print(">>> BOT INICIADO COM SUCESSO! <<<")
+    
+    # Inicia servidor Flask
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
